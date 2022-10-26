@@ -1,9 +1,5 @@
 # Hands on WebAssembly
 
-## adder
-
-just add two integers and return the result
-
 ## Prepare
 
 Have emsdk installed and ready
@@ -14,9 +10,9 @@ https://github.com/emscripten-core/emsdk.git
 
 ## How to transpile
 
-This is one ways to transpile.
+This is one way to transpile.
 
-This makes module of function(s) defined in C source file.
+This generates a module of function(s) defined in C source file.
 C source file can consist only of functions but main function.
 In the case of no main defined in C source file, `--no-entry` option is needed.
 
@@ -37,3 +33,9 @@ python -m http.server 8080
 ```
 
 then, open `XXX.html`
+
+# sample files
+
+## add.c
+
+takes two integers and return the sum
