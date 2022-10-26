@@ -4,9 +4,7 @@
 
 Have emsdk installed and ready
 
-```
-https://github.com/emscripten-core/emsdk.git
-```
+[https://github.com/emscripten-core/emsdk.git](https://github.com/emscripten-core/emsdk.git)
 
 ## How to transpile
 
