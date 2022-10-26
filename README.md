@@ -26,7 +26,7 @@ Modulizing target functions are described in the `EXPORTED_FUNCTIONS` list.
 emcc -O1 --no-entry -s "EXPORTED_FUNCTIONS=['_add']" -o add.wasm add.c
 ```
 
-## How to compile and run
+## How to run
 
 Run up a server
 
@@ -35,3 +35,5 @@ It can be any server, but python server is easy to start up.
 ```
 python -m http.server 8080
 ```
+
+then, open `XXX.html`
