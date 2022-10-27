@@ -11,11 +11,15 @@ int is_prime(int num){
   return 1;
 }
 
-int main(){
-  for(int i=3;i<10000;i++){
+void print_primes(int num){
+  for(int i=3;i<num;i++){
     if(0 < is_prime(i)){
       printf("%d\n", i);
     }
   }
+}
+
+int main(){
+  print_primes(1000);
   return 0;
 }
