@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <cstdint> // to use uint8_t
 #include <cstring>
 #include <iostream>

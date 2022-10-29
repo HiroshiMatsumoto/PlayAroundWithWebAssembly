@@ -1,4 +1,4 @@
-const initialData = {
+const initialProductData = {
   name: "Womane's Mid Rise Skinny Jeans",
   categoryId: "100",
 };
@@ -12,12 +12,13 @@ let moduleMemory = null;  // reference to WebAssembly.Memory, used for memory ma
 let moduleExports = null; // substitute for Module variable
 
 initializePage = () => {
-  console.log("init");
-  document.getElementById("category");
+  // console.log("init");
+  document.getElementById("name").value = initialProductData.name
+  const category = document.getElementById("category");
   const count = category.length;
 
   for (let index = 0; index < count; index++) {
-    if (category[index].value === initialData.categoryId) {
+    if (category[index].value === initialProductData.categoryId) {
       category.selectedIndex = index;
       break;
     }
@@ -25,6 +26,11 @@ initializePage = () => {
 
   // loading wasm
   const importObject = {
+    env:{
+      UpdateHostAboutError: (errorMessagePointer) => {
+        setErrorMessage(getStringFromMemory(errorMessagePointer));
+      },
+    },
     wasi_snapshot_preview1: {
       proc_exit: (value) => {}
     }
@@ -32,7 +38,6 @@ initializePage = () => {
 
   WebAssembly.instantiateStreaming(fetch("validate.wasm"), importObject).then(
     result => {
-     console.log(result.instance.exports);
       moduleExports = result.instance.exports;
       moduleMemory= moduleExports.memory;
     });
@@ -65,31 +70,38 @@ onClickSave = () => {
 }
 
 validateName = (name) => {
-  const isValid = Module.ccall('ValidateName',
-    'number',
-    ['string', 'number'],
-    [name, MAXIMUM_NAME_LENGTH]);
-  
+const namePointer = moduleExports.create_buffer((name.length + 1));
+  copyStringToMemory(name, namePointer);
+
+  const isValid = moduleExports.ValidateName(namePointer, MAXIMUM_NAME_LENGTH);
+
+  moduleExports.free_buffer(namePointer); 
   return (isValid === 1);
 }
 
 validateCategory = (categoryId) => {
+  console.log("validateCategory");
+  const categoryIdPointer = moduleExports.create_buffer((categoryId.length + 1));
+  copyStringToMemory(categoryId, categoryIdPointer);
+
   const arrayLength = VALID_CATEGORY_IDS.length;
   const bytesPerElement = Int32Array.BYTES_PER_ELEMENT;
   const arrayPointer = moduleExports.create_buffer((arrayLength * bytesPerElement));
 
+  const bytesForArray = new Int32Array(moduleMemory.buffer);
   bytesForArray.set(VALID_CATEGORY_IDS, (arrayPointer / bytesPerElement));
 
-  const isValid = Module.ccall('ValidateCategory', 'number', ['string', 'number', 'number'], [categoryId, arrayPointer, arrayLength]); 
+  // const isValid = Module.ccall('ValidateCategory', 'number', ['string', 'number', 'number'], [categoryId, arrayPointer, arrayLength]); 
+  const isValid = moduleExports.ValidateCategory(categoryIdPointer, arrayPointer, arrayLength);
 
-  Module._free(arrayPointer);
+  moduleExports.free_buffer(arrayPointer);
+  moduleExports.free_buffer(categoryIdPointer);
 
   return (isValid === 1); 
 }
 
 
 getStringFromMemory = (memoryOffset) => {
-  console.log("get string from memory");
   let returnValue = "";
 
   const size = 256;
