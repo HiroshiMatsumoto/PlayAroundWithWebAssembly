@@ -54,57 +54,35 @@ setErrorMessage = (error) => {
 
 
 onClickSave = () => {
-  let errorMessage = "";
-
-  // memory allocation
-  const errorMessagePointer = moduleExports.create_buffer(256); 
+  setErrorMessage(""); 
 
   const name = document.getElementById("name").value;
   const categoryId = getSelectedCategoryId();
 
-  if(
-    !validateName(name, errorMessagePointer) ||  
-    !validateCategory(categoryId, errorMessagePointer)
-  ) {
-    errorMessage = getStringFromMemory(errorMessagePointer);
-  }
-
-  // freeing allocated memory 
-  moduleExports.free_buffer(errorMessagePointer);
-
-  setErrorMessage(errorMessage);
-  if (errorMessage === "") {
+  if(validateName(name) && validateCategory(categoryId)){
+    //
   }
 }
 
-validateName = (name, errorMessagePointer) => {
-
-  const namePointer = moduleExports.create_buffer((name.length + 1));
-  copyStringToMemory(name, namePointer);
-
-  const isValid = moduleExports.ValidateName(namePointer, MAXIMUM_NAME_LENGTH, errorMessagePointer);
-  moduleExports.free_buffer(namePointer);
-
+validateName = (name) => {
+  const isValid = Module.ccall('ValidateName',
+    'number',
+    ['string', 'number'],
+    [name, MAXIMUM_NAME_LENGTH]);
+  
   return (isValid === 1);
 }
 
-validateCategory = (categoryId, errorMessagePointer) => {
-
-  const categoryIdPointer = module.Exports.create_buffer((categoryId.length + 1));
-  copyStringToMemory(categoryId, categoryIdPointer);
-
+validateCategory = (categoryId) => {
   const arrayLength = VALID_CATEGORY_IDS.length;
   const bytesPerElement = Int32Array.BYTES_PER_ELEMENT;
   const arrayPointer = moduleExports.create_buffer((arrayLength * bytesPerElement));
 
-
-  const bytesForArray = new Int32Array(moduleMemory.buffer);
   bytesForArray.set(VALID_CATEGORY_IDS, (arrayPointer / bytesPerElement));
 
-  const isValid = moduleExports.VlidateCategory(categoryIdPointer, arrayPointer, arrayLength, errorMessagePointer);
+  const isValid = Module.ccall('ValidateCategory', 'number', ['string', 'number', 'number'], [categoryId, arrayPointer, arrayLength]); 
 
-  moduleExports.free_buffer(arrayPointer);
-  moduleExports.free_buffer(categoryIdPointer);
+  Module._free(arrayPointer);
 
   return (isValid === 1); 
 }

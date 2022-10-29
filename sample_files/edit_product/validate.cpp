@@ -47,10 +47,11 @@ void free_buffer(const char* pointer)
 #ifdef __EMSCRIPTEN__
 EMSCRIPTEN_KEEPALIVE
 #endif
+extern void UpdateHostAboutError(const char* error_message);
 int ValidateValueProvided(const char *value, const char *error_message,
                           char *return_error_message) {
   if ((value == NULL) || (value[0] == '\0')) {
-    strcpy(return_error_message, error_message);
+    UpdateHostAboutError(error_message);
     return 0;
   }
   return 1;
@@ -66,7 +67,7 @@ int ValidateName(char *name, int maximum_length, char *return_error_message) {
   }
 
   if (strlen(name) > maximum_length) {
-    strcpy(return_error_message, "The Product Name is too long.");
+    UpdateHostAboutError("The Product Name is too long.");
     return 0;
   }
   return 1;
@@ -93,7 +94,12 @@ EMSCRIPTEN_KEEPALIVE
 int ValidateCategory(char *category_id, int *valid_category_ids,
                      int array_length, char *return_error_message) {
   if ((valid_category_ids == NULL) || (array_length == 0)) {
-    strcpy(return_error_message, "There are no Product Categories available.");
+    UpdateHostAboutError("There are no Product Categories available.");
+    return 0;
+  }
+
+  if( IsCategoryIdInArray(category_id, valid_category_ids, array_length) == 0){
+    UpdateHostAboutError("The selected Product Category is not valid.");
     return 0;
   }
   return 1;
