@@ -12,7 +12,6 @@ let moduleMemory = null;  // reference to WebAssembly.Memory, used for memory ma
 let moduleExports = null; // substitute for Module variable
 
 initializePage = () => {
-  // console.log("init");
   document.getElementById("name").value = initialProductData.name
   const category = document.getElementById("category");
   const count = category.length;
@@ -64,48 +63,53 @@ onClickSave = () => {
   const name = document.getElementById("name").value;
   const categoryId = getSelectedCategoryId();
 
-  if(validateName(name) && validateCategory(categoryId)){
-    //
-  }
+  Promise.all([
+    validateName(name),
+    validateCategory(categoryId)
+  ]).then(() => {
+  }).catch((error) => {
+    setErrorMessage(error);
+  });
 }
 
 validateName = (name) => {
-const namePointer = moduleExports.create_buffer((name.length + 1));
-  copyStringToMemory(name, namePointer);
+  return new Promise(function(resolve, reject){
+    const pointers = { onSuccess: null, onError: null };
+    createPointers( resolve, reject, pointers );
 
-  const isValid = moduleExports.ValidateName(namePointer, MAXIMUM_NAME_LENGTH);
-
-  moduleExports.free_buffer(namePointer); 
-  return (isValid === 1);
+    Module.ccall(
+      'ValidateName', 
+      null,
+      ['string','number','number','number'],
+      [name, MAXIMUM_NAME_LENGTH, pointers.onSuccess, pointers.onError]);
+  });
 }
 
 validateCategory = (categoryId) => {
-  console.log("validateCategory");
-  const categoryIdPointer = moduleExports.create_buffer((categoryId.length + 1));
-  copyStringToMemory(categoryId, categoryIdPointer);
 
-  const arrayLength = VALID_CATEGORY_IDS.length;
-  const bytesPerElement = Int32Array.BYTES_PER_ELEMENT;
-  const arrayPointer = moduleExports.create_buffer((arrayLength * bytesPerElement));
+  return new Promise(function(resolve, reject){
+    const pointers = { onSuccess: null, onError: null };
+    createPointers(resolve, reject, pointers);
 
-  const bytesForArray = new Int32Array(moduleMemory.buffer);
-  bytesForArray.set(VALID_CATEGORY_IDS, (arrayPointer / bytesPerElement));
+    const arrayLength = VALID_CATEGORY_IDS.length;
+    const bytesPerElement = Int32Array.BYTES_PER_ELEMENT;
+    const arrayPointer = moduleExports.create_buffer((arrayLength * bytesPerElement));
 
-  // const isValid = Module.ccall('ValidateCategory', 'number', ['string', 'number', 'number'], [categoryId, arrayPointer, arrayLength]); 
-  const isValid = moduleExports.ValidateCategory(categoryIdPointer, arrayPointer, arrayLength);
+   
+    Module.ccall('ValidateCategory', 
+      null,
+      ['string', 'number', 'number', 'number', 'number'],
+      [categoryId, arrayPointer, arrayLength, pointers.onSuccess, pointers.onError]
+    );
 
-  moduleExports.free_buffer(arrayPointer);
-  moduleExports.free_buffer(categoryIdPointer);
-
-  return (isValid === 1); 
+    Module._free(arrayPointer);
+  });
 }
-
 
 getStringFromMemory = (memoryOffset) => {
   let returnValue = "";
 
   const size = 256;
-
   const bytes = new Uint8Array(moduleMemory.buffer, memoryOffset, size);
 
   let character = "";
@@ -131,4 +135,27 @@ copyStringToMemory = (value, memoryOffset) => {
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set 
   bytes.set(new TextEncoder().encode((value + "\0")), memoryOffset);
 }
+
+
+createPointers = (resolve, reject, returnPointers) => {
+  const onSuccess = Module.addFunction(function(){
+    freePointers(onSuccess, onError);
+    resolve();
+  }, 'v');
+
+  const onError = Module.addFunction(function(errorMessage){
+    freePointers(onSuccess, onError);
+    reject(Module.UTF8ToString(errorMessage));
+  }, 'vi');
+  returnPointers.onSuccess = onSuccess;
+  returnPointers.onError = onError;
+
+}
+
+freePointers = (onSuccess, onError) => {
+  Module.removeFunction(onSuccess);
+  Module.removeFunction(onError);
+}
+
+
 

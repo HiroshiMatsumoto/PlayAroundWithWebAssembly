@@ -12,6 +12,11 @@
 extern "C" {
 #endif
 
+
+typedef void(*OnSuccess)(void);
+typedef void(*OnError)(const char*);
+
+
 /*
  * Emscripten generated module includes C Standard Library like strlen.
  *
@@ -49,10 +54,8 @@ void free_buffer(const char* pointer)
 EMSCRIPTEN_KEEPALIVE
 #endif
 extern void UpdateHostAboutError(const char* error_message);
-int ValidateValueProvided(const char *value, const char *error_message,
-                          char *return_error_message) {
+int ValidateValueProvided(const char *value){
   if ((value == NULL) || (value[0] == '\0')) {
-    UpdateHostAboutError(error_message);
     return 0;
   }
   return 1;
@@ -61,17 +64,17 @@ int ValidateValueProvided(const char *value, const char *error_message,
 #ifdef __EMSCRIPTEN__
 EMSCRIPTEN_KEEPALIVE
 #endif
-int ValidateName(char *name, int maximum_length, char *return_error_message) {
-  if (ValidateValueProvided(name, "A Product Name must be provided.",
-                            return_error_message) == 0) {
-    return 0;
+void ValidateName(char *name, int maximum_length, OnSuccess UpdateHostOnSuccess, OnError UpdateHostOnError){
+  if(ValidateValueProvided(name) == 0) {
+    UpdateHostOnError("A Product Name must be provided.");
+  }
+  else if (strlen(name) > maximum_length) {
+    UpdateHostOnError("The Product Name is too long.");
+  }
+  else {
+    UpdateHostOnSuccess();
   }
 
-  if (strlen(name) > maximum_length) {
-    UpdateHostAboutError("The Product Name is too long.");
-    return 0;
-  }
-  return 1;
 }
 
 #ifdef __EMSCRIPTEN__
@@ -92,18 +95,27 @@ int IsCategoryIdInArray(char *selected_category_id,
 #ifdef __EMSCRIPTEN__
 EMSCRIPTEN_KEEPALIVE
 #endif
-int ValidateCategory(char *category_id, int *valid_category_ids,
-                     int array_length, char *return_error_message) {
-  if ((valid_category_ids == NULL) || (array_length == 0)) {
-    UpdateHostAboutError("There are no Product Categories available.");
-    return 0;
+void ValidateCategory(
+    char *category_id, 
+    int *valid_category_ids,
+    int array_length, 
+    OnSuccess UpdateHostOnSuccess, 
+    OnError UpdateHostOnError)
+{
+  if( ValidateValueProvided(category_id) == 0)
+  {
+    UpdateHostOnError("A Product Category must be selected.");
   }
-
-  if( IsCategoryIdInArray(category_id, valid_category_ids, array_length) == 0){
-    UpdateHostAboutError("The selected Product Category is not valid.");
-    return 0;
+  else if(( valid_category_ids == NULL) || (array_length == 0)) 
+  {
+    UpdateHostOnError("There are no Product Categories available.");
   }
-  return 1;
+  else if( IsCategoryIdInArray(category_id, valid_category_ids, array_length) == 0){
+    UpdateHostOnError("The selected Product Category is not valid.");
+  }
+  else{
+    UpdateHostOnSuccess();
+  }
 }
 #ifdef __cplusplus
 }
